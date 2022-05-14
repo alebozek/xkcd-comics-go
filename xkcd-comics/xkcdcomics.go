@@ -35,7 +35,7 @@ func (comic Comic) printInfo() {
 }
 
 func getLastComic() int {
-	res, err := http.Get("https://xkcd.com/info.0.json")
+	res, err := http.Get("http://xkcd.com/info.0.json")
 	if err != nil {
 		log.Fatal("Error getting the latest comic number. Try again later.")
 	}
@@ -56,13 +56,13 @@ func getLastComic() int {
 	return comic.Number
 }
 
-func GetComicByNumber(number int) Comic {
+func GetComicByNumber(number int, noDisplay bool) Comic {
 	lastComicNumber := getLastComic()
 	if lastComicNumber < number {
 		log.Fatal("The number specified was bigger than the number of the last comic. Please insert one lower to this: ", lastComicNumber)
 	}
 
-	url := fmt.Sprintf("https://xkcd.com/%d/info.0.json", number)
+	url := fmt.Sprintf("http://xkcd.com/%d/info.0.json", number)
 	res, err := http.Get(url)
 	if err != nil {
 		log.Fatal(err)
@@ -74,43 +74,53 @@ func GetComicByNumber(number int) Comic {
 	comic := Comic{}
 	err = json.Unmarshal(body, &comic)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln()
 	}
 
-	download(comic)
+	download(comic, noDisplay)
 	return comic
 }
 
-func GetRandomComic() Comic {
+func GetRandomComic(noDisplay bool) Comic {
 	lastComicNumber := getLastComic()
 	rand.Seed(time.Now().Unix())
 
 	randomNumber := 1 + rand.Intn(lastComicNumber-1) + 1
-	randomComic := GetComicByNumber(randomNumber)
+	randomComic := GetComicByNumber(randomNumber, noDisplay)
 
 	return randomComic
 }
 
-func download(comic Comic) {
+func download(comic Comic, noDisplay bool) {
 	comic.printInfo()
 	res, err := http.Get(comic.Link)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer res.Body.Close()
+
 	fileName := fmt.Sprintf("%s.png", comic.Title)
 	image, err := os.Create(fileName)
 	if err != nil {
 		log.Fatal(err)
 	}
-	//defer image.Close()
+
 	_, err = io.Copy(image, res.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
+	err = res.Body.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	image.Close()
-	displayImage := exec.Command("feh", fileName)
-	err = displayImage.Run()
-	os.Exit(0)
+	err = image.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if !noDisplay {
+		displayImage := exec.Command("feh", fileName)
+		err = displayImage.Run()
+		os.Exit(0)
+	}
 }
