@@ -32,7 +32,6 @@ func main() {
 	if numberComic != nil {
 		var i int
 		i = *((*int)(unsafe.Pointer(numberComic)))
-
 		xkcd_comics.GetComicByNumber(i, b)
 	}
 }
